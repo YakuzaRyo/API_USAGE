@@ -1,0 +1,11 @@
+{
+    "name":"DeepSeek",
+    "api_key":"sk-real-key",
+    "base_url":"https://api.deepseek.com",
+    "usage_api_path":"/v1/usage",
+    "balance_api_path":"/user/balance",
+    "models":["deepseek-v4-pro"],
+    "balance_mapping":{"balance":"balance_infos.0.total_balance"},
+    "currency_symbol":"¥",
+    "interval_seconds":0
+}

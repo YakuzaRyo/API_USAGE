@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.db.bak
+data/.fernet_key
+.env
+*.log
+logs/
+.DS_Store
+Thumbs.db

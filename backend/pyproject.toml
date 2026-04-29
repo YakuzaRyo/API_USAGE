@@ -1,0 +1,17 @@
+[project]
+name = "llm-usage-monitor-backend"
+version = "0.1.0"
+description = "LLM API usage monitoring backend"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.136.0",
+    "httpx>=0.28.0",
+    "sqlalchemy>=2.0.49",
+    "aiosqlite>=0.21.0",
+    "apscheduler>=3.10.0",
+    "cryptography>=44.0.0",
+    "uvicorn[standard]>=0.44.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "alembic>=1.18.0",
+]

@@ -1,0 +1,121 @@
+## ADDED Requirements
+
+### Requirement: Step-based wizard modal
+The system SHALL present the vendor configuration form as a modal with 3 step pages, replacing the single-page form. Each step displays a subset of fields to reduce cognitive load.
+
+#### Scenario: Wizard opens for new provider
+- **WHEN** user clicks "+ 新增厂商"
+- **THEN** the wizard modal opens at Step 1 with all fields in default state
+
+#### Scenario: Wizard opens for editing provider
+- **WHEN** user clicks "编辑" on an existing provider card
+- **THEN** the wizard modal opens at Step 1 with all fields pre-filled from the provider data
+
+### Requirement: Step 1 — Connection configuration
+Step 1 SHALL contain the following fields. All fields are required and validated on save.
+
+| Field | Type | Required |
+|-------|------|----------|
+| 名称 | text input | yes |
+| API Key | password input | yes |
+| Base URL | text input | yes |
+| 追踪模型 | tag input (add/remove) | yes |
+
+#### Scenario: Step 1 validation — missing required fields
+- **WHEN** user clicks "保存并继续" on Step 1 with empty name
+- **THEN** an inline error message "名称不能为空" is shown and save is blocked
+
+#### Scenario: Step 1 validation — all required fields filled
+- **WHEN** user clicks "保存并继续" on Step 1 with valid name, api_key, base_url, and at least one model
+- **THEN** the provider is saved via API and the wizard advances to Step 2
+
+### Requirement: Step 2 — Usage API path and mapping
+Step 2 SHALL contain fields for configuring the usage API path and JSONPath mappings. All fields are optional — this step can be skipped.
+
+| Field | Type | Required |
+|-------|------|----------|
+| Usage API Path | text input + "测试" button | no |
+| Test response | JSON pre block (shown after test) | — |
+| JSONPath tag cloud | clickable tags parsed from response | — |
+| Token 总量 JSONPath | text input (filled by tag click) | no |
+| 费用 JSONPath | text input (filled by tag click) | no |
+
+#### Scenario: Test usage API path
+- **WHEN** user enters a path and clicks "测试"
+- **THEN** the test API is called with current base_url, api_key, and the path; the JSON response is displayed below
+
+#### Scenario: Skip Step 2
+- **WHEN** user clicks "保存并继续" on Step 2 without filling any fields
+- **THEN** the current form state is saved (no validation errors) and wizard advances to Step 3
+
+### Requirement: Step 3 — Balance path, currency, and polling
+Step 3 SHALL contain fields for balance API configuration and other settings. All fields are optional.
+
+| Field | Type | Required |
+|-------|------|----------|
+| Balance API Path | text input + "测试" button | no |
+| Test response | JSON pre block | — |
+| JSONPath tag cloud | clickable tags | — |
+| 余额 JSONPath | text input (filled by tag click) | no |
+| 货币符号 | text input (default: CNY) | no |
+| 轮询间隔 | select dropdown | no |
+
+#### Scenario: Test balance API path
+- **WHEN** user enters a balance path and clicks "测试"
+- **THEN** the test API is called and the JSON response is displayed with parsed tag cloud
+
+#### Scenario: Save on Step 3
+- **WHEN** user clicks "保存" on Step 3
+- **THEN** the full form state is saved via API and the wizard closes
+
+### Requirement: Dot navigation
+The wizard SHALL display a horizontal dot indicator at the bottom, with exactly 3 dots representing the 3 steps. The dot for the current step is enlarged and filled with the primary color. All dots are clickable at any time.
+
+#### Scenario: Dot visual states
+- **WHEN** the wizard is on Step 2
+- **THEN** the Step 1 dot is a 12px outlined circle, Step 2 dot is a 20px filled circle in `--color-primary`, Step 3 dot is a 12px outlined circle
+
+#### Scenario: Click dot to jump
+- **WHEN** user is on Step 3 and clicks the Step 1 dot
+- **THEN** the wizard immediately displays Step 1 content without saving
+
+#### Scenario: Click current dot
+- **WHEN** user clicks the dot for the current step
+- **THEN** nothing happens (no-op)
+
+### Requirement: Previous / Next navigation buttons
+The wizard SHALL display navigation buttons to guide step transitions.
+
+#### Scenario: Step 1 navigation buttons
+- **WHEN** wizard is on Step 1
+- **THEN** only "保存并继续" button is visible (no "上一步" button)
+
+#### Scenario: Step 2 navigation buttons
+- **WHEN** wizard is on Step 2
+- **THEN** both "上一步" and "保存并继续" buttons are visible
+
+#### Scenario: Step 3 navigation buttons
+- **WHEN** wizard is on Step 3
+- **THEN** "上一步" and "保存" buttons are visible ("保存并继续" is replaced by "保存")
+
+#### Scenario: Previous button behavior
+- **WHEN** user clicks "上一步"
+- **THEN** wizard displays the previous step content without saving current step changes to the server (form state remains in memory)
+
+### Requirement: Incremental save
+The wizard SHALL support partial saves — each step's "保存" action persists only the fields known so far, allowing progressive configuration across multiple sessions.
+
+#### Scenario: Create provider with Step 1 only
+- **WHEN** a new provider is saved at Step 1 with name, api_key, base_url, and models
+- **THEN** a POST request creates the provider record; subsequent Step 2/3 saves use PUT to update the same record
+
+#### Scenario: Edit provider with partial update
+- **WHEN** editing an existing provider and saving at Step 2
+- **THEN** a PUT request updates the provider with all currently accumulated field values
+
+### Requirement: Modal close
+The wizard modal SHALL be closable by clicking the overlay backdrop or a close button.
+
+#### Scenario: Close without saving unsaved changes
+- **WHEN** user clicks the overlay backdrop with unsaved changes in the current step
+- **THEN** the wizard closes and unsaved changes to the current step are discarded
