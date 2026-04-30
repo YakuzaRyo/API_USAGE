@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useProvidersStore } from '../stores/providers'
-import { type Provider } from '../api'
+import { type Provider, fetchCategories } from '../api'
 import ProviderWizard from '../components/ProviderWizard.vue'
 
 const store = useProvidersStore()
@@ -76,7 +76,15 @@ async function doCollect(id: number) {
   finally { collecting.value = null }
 }
 
-onMounted(() => store.fetch())
+const categoryMap = ref<Record<number, string>>({})
+
+onMounted(async () => {
+  await store.fetch()
+  try {
+    const res = await fetchCategories()
+    for (const c of res.data) categoryMap.value[c.id] = c.name
+  } catch { /* silent */ }
+})
 </script>
 
 <template>
@@ -101,6 +109,7 @@ onMounted(() => store.fetch())
             <span class="tag">{{ intervalLabel(p.interval_seconds) }}</span>
             <span class="tag" style="background: var(--color-primary); color: var(--color-surface);">{{ p.currency_symbol }}</span>
             <span class="tag" :class="p.billing_mode === 'token_plan' ? 'mode-tag-tp' : 'mode-tag-api'">{{ p.billing_mode === 'token_plan' ? 'TokenPlan' : 'API' }}</span>
+            <span v-if="p.category_id && categoryMap[p.category_id]" class="tag" style="background: var(--color-primary); color: var(--color-surface);">{{ categoryMap[p.category_id] }}</span>
           </div>
           <div class="provider-meta">
             <span>Key: {{ maskKey(p.api_key) }}</span>
