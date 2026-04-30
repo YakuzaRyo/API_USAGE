@@ -11,6 +11,7 @@ __pycache__/
 data/.fernet_key
 .env
 apikey&base_url.txt
+backend/data/logos/
 *.log
 logs/
 .DS_Store
