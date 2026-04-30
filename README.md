@@ -114,4 +114,4 @@ Serve `frontend/dist/` with any static file server and ensure it proxies `/api` 
 
 ## License
 
-Private project.
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
