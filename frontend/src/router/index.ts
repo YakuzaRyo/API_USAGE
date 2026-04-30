@@ -22,6 +22,11 @@ const router = createRouter({
       name: 'categories',
       component: () => import('../views/CategoryManager.vue'),
     },
+    {
+      path: '/spotlight',
+      name: 'spotlight',
+      component: () => import('../views/SpotlightView.vue'),
+    },
   ],
 })
 

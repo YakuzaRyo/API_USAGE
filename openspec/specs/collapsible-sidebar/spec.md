@@ -52,15 +52,19 @@ Each nav item SHALL display a `lucide-vue-next` icon component alongside its tex
 - **THEN** nav item text SHALL be clipped and only icons SHALL be fully visible
 
 ### Requirement: ECharts resize on sidebar transition
-When the sidebar width transition completes, the system SHALL dispatch a synthetic `resize` event on `window` so that all ECharts instances re-calculate their dimensions.
+When the sidebar width transition completes, the system SHALL dispatch a synthetic `resize` event on `window` so that all ECharts instances re-calculate their dimensions. The main content area SHALL expand to fill all available horizontal space (no `max-width` constraint on `.main-inner`), ensuring charts visually grow wider when the sidebar collapses.
 
 #### Scenario: Charts resize after collapse
 - **WHEN** sidebar transition from expanded to collapsed completes
-- **THEN** a `resize` event SHALL be dispatched on `window`, causing all visible ECharts instances to resize to the wider content area
+- **THEN** a `resize` event SHALL be dispatched on `window`, the main content area SHALL occupy the full remaining viewport width, and all visible ECharts instances SHALL resize to match the wider container
 
 #### Scenario: Charts resize after expand
 - **WHEN** sidebar transition from collapsed to expanded completes
-- **THEN** a `resize` event SHALL be dispatched on `window`, causing all visible ECharts instances to resize to the narrower content area
+- **THEN** a `resize` event SHALL be dispatched on `window`, the main content area SHALL shrink to the narrower available width, and all visible ECharts instances SHALL resize to match the narrower container
+
+#### Scenario: Content fills available width at all sidebar states
+- **WHEN** the sidebar is in either expanded or collapsed state
+- **THEN** the `.main-inner` container SHALL NOT have a `max-width` constraint that prevents it from filling the `.main-content` area, and visible content (grids, charts, cards) SHALL expand to fill the full width
 
 ### Requirement: Brand display adapts to sidebar state
 The sidebar brand area SHALL display "LLM Usage" in expanded mode and the letter "L" in collapsed mode.

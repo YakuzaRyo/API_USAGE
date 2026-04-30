@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-import { LayoutDashboard, Server, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { LayoutDashboard, Server, FolderOpen, Sparkles, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const route = useRoute()
 
@@ -195,6 +195,5 @@ const toggleIcon = computed(() => collapsed.value ? ChevronRight : ChevronLeft)
 
 .main-inner {
   padding: var(--space-xl);
-  max-width: 1200px;
 }
 </style>
