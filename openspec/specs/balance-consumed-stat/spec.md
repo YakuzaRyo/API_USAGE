@@ -4,22 +4,30 @@
 
 Tracks total balance consumed since first collection in the dashboard stats cards.
 
-## ADDED Requirements
+## Requirements
 
-### Requirement: Balance consumed in summary API
-The stats summary API SHALL return a `balance_consumed` field representing the total balance decrease since each provider's first collection.
+### Requirement: Balance consumed in billing summary for API providers
+The billing summary API SHALL compute the consumed amount for API-billed providers by iterating all balance snapshots in chronological order and summing every positive balance decrease between consecutive snapshots. Balance increases (top-ups) SHALL be skipped.
 
-#### Scenario: Balance consumed computed
-- **WHEN** a provider has initial balance 100 and current balance 70
-- **THEN** `balance_consumed` is 30.0
+#### Scenario: Continuous consumption without top-up
+- **WHEN** a provider has balance snapshots [100, 80, 65, 50]
+- **THEN** the consumed amount is (100-80) + (80-65) + (65-50) = 50.0
+
+#### Scenario: Consumption with top-up between snapshots
+- **WHEN** a provider has balance snapshots [100, 80, 120, 90]
+- **THEN** the consumed amount is (100-80) + (120-90) = 50.0, and the 80→120 top-up does not affect the total
 
 #### Scenario: No balance history
 - **WHEN** no provider has balance collection history
-- **THEN** `balance_consumed` is 0.0
+- **THEN** the consumed amount is 0.0
 
 ### Requirement: Balance consumed stat card
-The Dashboard SHALL display a fifth stat card showing balance consumed total, styled identically to the existing four cards.
+The Dashboard SHALL display a stat card showing the total balance consumed amount, styled identically to the existing cards.
 
-#### Scenario: Card visible
-- **WHEN** the dashboard loads with balance data
-- **THEN** a card labeled "余额消耗" appears with the consumed amount and currency symbol
+#### Scenario: Card visible with API providers
+- **WHEN** the dashboard loads with API-billed providers that have consumed balance
+- **THEN** a card labeled "费用" appears with the incrementally-computed consumed amount and currency symbol
+
+#### Scenario: Card visible with token-plan providers
+- **WHEN** the dashboard loads with only token-plan providers
+- **THEN** the "费用" card shows the accumulated subscription fees (unchanged behavior)

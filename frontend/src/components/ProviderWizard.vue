@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { useProvidersStore } from '../stores/providers'
-import { testApi, testApiForProvider, type Provider } from '../api'
+import { testApi, testApiForProvider, fetchCategories, type Provider, type Category } from '../api'
 import JsonPathTagCloud from './JsonPathTagCloud.vue'
 
 const props = defineProps<{ provider: Provider | null }>()
@@ -25,6 +25,31 @@ const intervalOptions = [
   { value: 86400, label: '每 24 小时' },
 ]
 
+const categories = ref<Category[]>([])
+const selectedCategoryId = ref<number | null>(null)
+
+onMounted(async () => {
+  try { const res = await fetchCategories(); categories.value = res.data }
+  catch { /* silent */ }
+})
+
+function onCategorySelect(catId: number | null) {
+  selectedCategoryId.value = catId
+  if (!catId) return
+  const cat = categories.value.find(c => c.id === catId)
+  if (!cat) return
+  if (form.billing_mode === 'api') {
+    form.base_url = cat.api_base_url || form.base_url
+    form.usage_api_path = cat.api_usage_path || form.usage_api_path
+    form.balance_api_path = cat.api_balance_path || form.balance_api_path
+  } else {
+    form.base_url = cat.tp_base_url || form.base_url
+    form.usage_api_path = cat.tp_usage_path || form.usage_api_path
+  }
+  form.currency_symbol = cat.currency_symbol || form.currency_symbol
+  if (cat.models.length > 0) form.models = [...cat.models]
+}
+
 function defaultForm() {
   return {
     name: '',
@@ -41,6 +66,7 @@ function defaultForm() {
     billing_mode: 'api',
     monthly_fee: null as number | null,
     sub_start_date: null as string | null,
+    category_id: null as number | null,
   }
 }
 
@@ -63,6 +89,8 @@ watch(() => props.provider, (p) => {
     form.billing_mode = p.billing_mode ?? 'api'
     form.monthly_fee = p.monthly_fee ?? null
     form.sub_start_date = p.sub_start_date ?? null
+    form.category_id = (p as any).category_id ?? null
+    selectedCategoryId.value = (p as any).category_id ?? null
     apiKeyDirty.value = false
   }
 }, { immediate: true })
@@ -166,6 +194,7 @@ function buildPayload() {
     billing_mode: form.billing_mode,
     monthly_fee: form.monthly_fee,
     sub_start_date: form.sub_start_date,
+    category_id: selectedCategoryId.value,
   }
   if (!editingId.value || apiKeyDirty.value) {
     payload.api_key = form.api_key
@@ -255,8 +284,22 @@ function close() {
         <!-- ====== STEP 1 ====== -->
         <div v-if="currentStep === 1" class="step-panel">
           <div class="form-group">
+            <label>计费方式</label>
+            <div class="pill-group">
+              <button type="button" class="pill" :class="form.billing_mode === 'api' ? 'active' : 'inactive'" @click="form.billing_mode = 'api'; onCategorySelect(selectedCategoryId)">API 查询</button>
+              <button type="button" class="pill" :class="form.billing_mode === 'token_plan' ? 'active' : 'inactive'" @click="form.billing_mode = 'token_plan'; onCategorySelect(selectedCategoryId)">Token Plan</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>分类</label>
+            <select v-model="selectedCategoryId" @change="onCategorySelect(selectedCategoryId)">
+              <option :value="null">无分类</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>名称 *</label>
-            <input v-model="form.name" placeholder="如 OpenAI" />
+            <input v-model="form.name" placeholder="如 OpenAI-GPT4" />
             <span v-if="step1Errors.name" class="field-err">{{ step1Errors.name }}</span>
           </div>
           <div class="form-group">
@@ -319,14 +362,6 @@ function close() {
 
         <!-- ====== STEP 3 ====== -->
         <div v-if="currentStep === 3" class="step-panel">
-          <div class="form-group">
-            <label>计费方式</label>
-            <div class="pill-group">
-              <button type="button" class="pill" :class="form.billing_mode === 'api' ? 'active' : 'inactive'" @click="form.billing_mode = 'api'">API 查询</button>
-              <button type="button" class="pill" :class="form.billing_mode === 'token_plan' ? 'active' : 'inactive'" @click="form.billing_mode = 'token_plan'">Token Plan</button>
-            </div>
-          </div>
-
           <!-- API mode -->
           <template v-if="form.billing_mode === 'api'">
             <div class="form-group">

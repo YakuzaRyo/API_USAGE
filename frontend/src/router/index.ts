@@ -17,6 +17,11 @@ const router = createRouter({
       name: 'providers',
       component: () => import('../views/ProviderView.vue'),
     },
+    {
+      path: '/categories',
+      name: 'categories',
+      component: () => import('../views/CategoryManager.vue'),
+    },
   ],
 })
 

@@ -18,14 +18,16 @@ The system SHALL present the vendor configuration form as a modal with 3 step pa
 - **THEN** the wizard modal opens at Step 1 with all fields pre-filled from the provider data
 
 ### Requirement: Step 1 — Connection configuration
-Step 1 SHALL contain the following fields. All fields except API Key during edit mode are validated on save.
+Step 1 SHALL contain the following fields. billing_mode and category appear first and control auto-fill of subsequent fields. All fields except API Key during edit mode are validated on save.
 
 | Field | Type | Required |
 |-------|------|----------|
+| 计费方式 | pill toggle (API 查询 / Token Plan) | yes |
+| 分类 | select dropdown (categories list) | no |
 | 名称 | text input | yes |
 | API Key | password input | yes (create) / no (edit, when unchanged) |
-| Base URL | text input | yes |
-| 追踪模型 | tag input (add/remove) | yes |
+| Base URL | text input, auto-filled from category | yes |
+| 追踪模型 | tag input (add/remove), auto-filled from category | yes |
 
 #### Scenario: Step 1 validation — missing required fields
 - **WHEN** user clicks "保存并继续" on Step 1 with empty name
@@ -35,17 +37,21 @@ Step 1 SHALL contain the following fields. All fields except API Key during edit
 - **WHEN** user clicks "保存并继续" on Step 1 with valid name, api_key, base_url, and at least one model
 - **THEN** the provider is saved via API and the wizard advances to Step 2
 
+#### Scenario: Category auto-fill on selection
+- **WHEN** user selects a category and billing_mode is "API 查询"
+- **THEN** base_url, usage_api_path, balance_api_path, models, and currency_symbol are pre-filled from the category's API tab
+
+#### Scenario: Category auto-fill respects billing mode
+- **WHEN** user switches billing_mode to "Token Plan" and selects a category
+- **THEN** fields are pre-filled from the category's Token Plan tab
+
 #### Scenario: API Key field shows masked placeholder on edit
 - **WHEN** wizard opens for editing an existing provider
-- **THEN** the API Key input displays a masked placeholder value and the field is visually marked as unchanged
-
-#### Scenario: API Key field prevents browser autofill
-- **WHEN** the API Key password input is rendered
-- **THEN** it includes `autocomplete="off"` to prevent browser password managers from injecting unrelated credentials
+- **THEN** the API Key input displays a masked placeholder value
 
 #### Scenario: API Key excluded from update when unchanged
-- **WHEN** user saves the wizard at any step without explicitly typing into the API Key field
-- **THEN** the update payload SHALL NOT include `api_key`, preserving the existing encrypted key on the server
+- **WHEN** user saves the wizard without explicitly typing into the API Key field
+- **THEN** the update payload SHALL NOT include `api_key`
 
 ### Requirement: Step 2 — Usage API path and mapping
 Step 2 SHALL contain fields for configuring the usage API path and JSONPath mappings. All fields are optional — this step can be skipped.
@@ -71,16 +77,18 @@ Step 2 SHALL contain fields for configuring the usage API path and JSONPath mapp
 - **THEN** the current form state is saved (no validation errors) and wizard advances to Step 3
 
 ### Requirement: Step 3 — Balance path, currency, and polling
-Step 3 SHALL contain fields for balance API configuration and other settings. All fields are optional.
+Step 3 SHALL contain fields for balance API configuration and other settings. billing_mode has been moved to Step 1. Token Plan exclusive fields (月费, 订阅日期) appear only when billing_mode is "token_plan".
 
 | Field | Type | Required |
 |-------|------|----------|
-| Balance API Path | text input + "测试" button | no |
+| Balance API Path | text input + "测试" button (API mode only) | no |
 | Test response | JSON pre block | — |
 | JSONPath tag cloud | clickable tags | — |
 | 余额 JSONPath | text input (filled by tag click) | no |
-| 货币符号 | text input (default: CNY) | no |
+| 货币符号 | text input, auto-filled from category | no |
 | 轮询间隔 | select dropdown | no |
+| 月费金额 (Token Plan) | number input | no |
+| 订阅起始日期 (Token Plan) | date input | no |
 
 #### Scenario: Test balance API path for new provider
 - **WHEN** user enters a balance path and clicks "测试" while creating a new provider

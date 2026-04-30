@@ -14,30 +14,43 @@ let chart: ECharts | null = null
 // ── Presets ──────────────────────────────
 interface Preset {
   label: string
+  windowMs: number
   bucketMs: number
-  defaultDays: number
+}
+const HOUR_MS = 3600000
+const DAY_MS = 86400000
+function scaledBucket(windowDays: number): number {
+  return Math.round(HOUR_MS + (DAY_MS - HOUR_MS) * (windowDays - 1) / 29)
 }
 const presets: Preset[] = [
-  { label: '5分钟', bucketMs: 5 * 60 * 1000, defaultDays: 0 },
-  { label: '1小时', bucketMs: 1 * 60 * 1000, defaultDays: 0 },
-  { label: '7天',   bucketMs: 1 * 60 * 60 * 1000, defaultDays: 7 },
-  { label: '30天',  bucketMs: 24 * 60 * 60 * 1000, defaultDays: 30 },
+  { label: '当天', windowMs: 1 * DAY_MS,  bucketMs: HOUR_MS },
+  { label: '7天',  windowMs: 7 * DAY_MS,  bucketMs: scaledBucket(7) },
+  { label: '30天', windowMs: 30 * DAY_MS, bucketMs: DAY_MS },
 ]
 
-const activePreset = ref<number>(2) // default: 7天
+const activePreset = ref<number>(1) // default: 7天
 const bucketMs = computed(() => presets[activePreset.value].bucketMs)
 
-// ── Date state ───────────────────────────
-function fmt(d: Date) { return d.toISOString().slice(0, 10) }
+// ── Local calendar anchor ─────────────────
+function localMidnight(): number {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+}
 
-const presetDefaultDays = computed(() => presets[activePreset.value].defaultDays)
+// ── Date state ───────────────────────────
+function fmtIso(d: Date) { return d.toISOString() }
+
 const datesFromPreset = computed(() => {
-  const days = presetDefaultDays.value
-  if (days === 0) return { start: fmt(new Date()), end: fmt(new Date()) }
-  const end = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - days)
-  return { start: fmt(start), end: fmt(end) }
+  const bMs = bucketMs.value
+  const anchor = localMidnight()
+  const now = Date.now()
+  const windowMs = presets[activePreset.value].windowMs
+  // right edge: ceil to next bucket from now
+  const endTs = anchor + Math.ceil((now - anchor) / bMs) * bMs
+  // left edge: aligned to bucket boundary, ≥ windowMs before end
+  const rawStart = endTs - windowMs
+  const startTs = anchor + Math.floor((rawStart - anchor) / bMs) * bMs
+  return { start: fmtIso(new Date(startTs)), end: fmtIso(new Date(endTs)) }
 })
 
 const startDate = ref(datesFromPreset.value.start)
@@ -66,6 +79,7 @@ function buildConsumption(): Map<string, [Date, number][]> {
 
   const result = new Map<string, [Date, number][]>()
   const bMs = bucketMs.value
+  const anchor = localMidnight()
 
   for (const [name, points] of map) {
     points.sort((a, b) => a.date.localeCompare(b.date))
@@ -78,16 +92,23 @@ function buildConsumption(): Map<string, [Date, number][]> {
       if (diff <= 0) continue
 
       const ts = new Date(points[i].date).getTime()
-      const bucketKey = Math.floor(ts / bMs) * bMs
+      const bucketKey = anchor + Math.floor((ts - anchor) / bMs) * bMs
       bucketMap.set(bucketKey, (bucketMap.get(bucketKey) || 0) + diff)
     }
 
+    const entries = [...bucketMap.entries()]
+    if (entries.length === 0) continue
+    entries.sort((a, b) => a[0] - b[0])
+
+    const firstBucket = entries[0][0]
+    const lastBucket = entries[entries.length - 1][0]
+
     const series: [Date, number][] = []
-    for (const [key, val] of bucketMap) {
-      series.push([new Date(key), Math.round(val * 10000) / 10000])
+    for (let t = firstBucket; t <= lastBucket; t += bMs) {
+      const val = bucketMap.get(t) || 0
+      series.push([new Date(t), Math.round(val * 10000) / 10000])
     }
-    series.sort((a, b) => a[0].getTime() - b[0].getTime())
-    if (series.length > 0) result.set(name, series)
+    result.set(name, series)
   }
 
   return result
@@ -100,12 +121,29 @@ function renderChart(data: Map<string, [Date, number][]>) {
     chart = echarts.init(chartRef.value)
   }
 
+  const bMs = bucketMs.value
+
+  // X-axis range = full sliding window
+  const xMin = new Date(startDate.value).getTime()
+  const xMax = new Date(endDate.value).getTime()
+
   const seriesData: any[] = []
   for (const [name, pts] of data) {
+    // Index existing points by bucket timestamp
+    const ptMap = new Map(pts.map(([d, v]) => [d.getTime(), v]))
+
+    // Fill every bucket in the window, y=0 for empty ones
+    const padded: [Date, number][] = []
+    for (let t = xMin; t <= xMax; t += bMs) {
+      const val = ptMap.get(t) ?? 0
+      padded.push([new Date(t), Math.round(val * 10000) / 10000])
+    }
+
     seriesData.push({
       name,
       type: 'line',
-      data: pts,
+      data: padded,
+      connectNulls: false,
       smooth: 0.3,
       showSymbol: false,
       lineStyle: { width: 2 },
@@ -129,10 +167,13 @@ function renderChart(data: Map<string, [Date, number][]>) {
     grid: { left: 70, right: 20, top: 20, bottom: 40 },
     xAxis: {
       type: 'time',
+      min: xMin,
+      max: xMax,
       axisLabel: { fontSize: 10 },
     },
     yAxis: {
       type: 'value',
+      min: 0,
       name: `消耗 (${currency})`,
       nameTextStyle: { fontSize: 12 },
       axisLabel: {
@@ -230,6 +271,8 @@ onUnmounted(() => {
   border-radius: 16px;
   border: 1.5px solid var(--color-border);
   padding: 4px 12px;
+  min-width: 48px;
+  text-align: center;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;

@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
@@ -15,7 +15,7 @@ LOG_RETENTION_DAYS = 30
 class _JsonFormatter(logging.Formatter):
     def format(self, record):
         obj = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now().astimezone().isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

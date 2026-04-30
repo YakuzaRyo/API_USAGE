@@ -7,7 +7,7 @@ A lightweight dual-option toggle component for switching between two view modes.
 ## ADDED Requirements
 
 ### Requirement: Capsule button pair
-The component SHALL render two capsule-shaped buttons horizontally aligned with a 8px gap. Each button supports an active/inactive visual state via scale transform.
+The component SHALL render a variable number of capsule-shaped buttons determined by the `options` prop, horizontally aligned with a 8px gap. Each button supports an active/inactive visual state via scale transform.
 
 #### Scenario: Active state
 - **WHEN** a capsule is the currently selected option
@@ -19,11 +19,11 @@ The component SHALL render two capsule-shaped buttons horizontally aligned with 
 
 #### Scenario: Click switches selection
 - **WHEN** user clicks an inactive capsule
-- **THEN** it becomes active, the previously active capsule becomes inactive, and `update:modelValue` is emitted with the new value
+- **THEN** it becomes active, the previously active capsule becomes inactive, and `update:modelValue` is emitted
 
-#### Scenario: Hover feedback
-- **WHEN** user hovers over any capsule
-- **THEN** the background transitions toward `var(--color-primary)` within 150ms
+#### Scenario: Three pills in dashboard
+- **WHEN** Dashboard renders the PillModeSelector with 3 options (综合看板, 用量分析, 余额变化)
+- **THEN** three capsules are displayed, with 综合看板 active by default
 
 ### Requirement: Typewriter description
 The component SHALL display a description string below the capsule pair. When the selected option changes, the old description is cleared and the new one appears character by character.

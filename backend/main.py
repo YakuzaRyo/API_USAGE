@@ -12,16 +12,29 @@ from alembic import command
 from logging_config import setup_logging
 from database import engine, init_db, AsyncSessionLocal
 from models import Provider
-from routers import providers, stats
+from routers import providers, stats, categories
 from services.scheduler import init_scheduler, shutdown_scheduler, register_job
 
 
 def _run_migrations():
     """Run Alembic with a dedicated sync engine, disposed immediately after."""
+    import logging
+    logger = logging.getLogger("backend.migrations")
     sync_url = "sqlite:///./data/app.db"
     sync_engine = sa.create_engine(sync_url)
     alembic_cfg = AlembicConfig("alembic.ini")
     try:
+        from alembic.script import ScriptDirectory
+        from alembic.runtime.migration import MigrationContext
+        with sync_engine.connect() as conn:
+            ctx = MigrationContext.configure(conn)
+            current = ctx.get_current_revision()
+            script = ScriptDirectory.from_config(alembic_cfg)
+            head = script.get_current_head()
+            if current == head:
+                logger.info("Migrations already at head (%s), skipped", head)
+                return
+        logger.info("Running migrations from %s to %s", current or "base", head)
         command.upgrade(alembic_cfg, "head")
     finally:
         sync_engine.dispose()
@@ -63,6 +76,7 @@ app.add_middleware(
 )
 
 app.include_router(providers.router, prefix="/api")
+app.include_router(categories.router, prefix="/api")
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])
 
 

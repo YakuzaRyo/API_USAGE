@@ -31,6 +31,7 @@ class ProviderCreate(BaseModel):
     billing_mode: str = "api"
     monthly_fee: float | None = None
     sub_start_date: str | None = None
+    category_id: int | None = None
 
 
 class ProviderUpdate(BaseModel):
@@ -47,6 +48,7 @@ class ProviderUpdate(BaseModel):
     billing_mode: str | None = None
     monthly_fee: float | None = None
     sub_start_date: str | None = None
+    category_id: int | None = None
 
 
 class ProviderResponse(BaseModel):
@@ -67,6 +69,7 @@ class ProviderResponse(BaseModel):
     billing_mode: str = "api"
     monthly_fee: float | None = None
     sub_start_date: str | None = None
+    category_id: int | None = None
     created_at: str
 
 
@@ -97,6 +100,7 @@ def _provider_response(p: Provider) -> ProviderResponse:
         billing_mode=p.billing_mode,
         monthly_fee=p.monthly_fee,
         sub_start_date=p.sub_start_date,
+        category_id=p.category_id,
         created_at=p.created_at.isoformat(),
     )
 
@@ -130,6 +134,7 @@ async def create_provider(data: ProviderCreate, db: AsyncSession = Depends(get_d
         billing_mode=data.billing_mode,
         monthly_fee=data.monthly_fee,
         sub_start_date=data.sub_start_date,
+        category_id=data.category_id,
     )
     db.add(provider)
     await db.commit()
@@ -156,7 +161,7 @@ async def update_provider(provider_id: int, data: ProviderUpdate, db: AsyncSessi
 
     for field in ("name", "base_url", "usage_api_path", "balance_api_path",
                   "models", "usage_mapping", "balance_mapping", "currency_symbol",
-                  "billing_mode", "monthly_fee", "sub_start_date"):
+                  "billing_mode", "monthly_fee", "sub_start_date", "category_id"):
         val = getattr(data, field, None)
         if val is not None:
             setattr(provider, field, val)

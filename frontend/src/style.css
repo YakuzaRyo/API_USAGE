@@ -131,6 +131,29 @@ input:focus, select:focus, textarea:focus {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Neo-Brutalist scrollbar */
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 0;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+.main-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
 .card:hover {
   transform: translate(-3px, -3px);
   box-shadow: var(--shadow-lg);

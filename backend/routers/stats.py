@@ -1,11 +1,11 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from database import get_db
-from models import UsageRecord, Provider, CollectionLog
+from models import UsageRecord, Provider, CollectionLog, now_local
 
 router = APIRouter()
 logger = logging.getLogger("backend.routers.stats")
@@ -160,7 +160,7 @@ async def get_balance_history(
     if start:
         base = base.where(CollectionLog.created_at >= datetime.fromisoformat(start))
     elif days:
-        base = base.where(CollectionLog.created_at >= datetime.now(timezone.utc) - timedelta(days=days))
+        base = base.where(CollectionLog.created_at >= now_local() - timedelta(days=days))
     if end:
         base = base.where(CollectionLog.created_at < datetime.fromisoformat(end) + timedelta(days=1))
 
@@ -198,8 +198,8 @@ async def get_billing_summary(
         if p.billing_mode == "token_plan":
             amount = 0.0
             if p.monthly_fee and p.sub_start_date:
-                start_date = datetime.fromisoformat(p.sub_start_date).replace(tzinfo=timezone.utc)
-                now = datetime.now(timezone.utc)
+                start_date = datetime.fromisoformat(p.sub_start_date)
+                now = now_local()
                 months = max(0, (now.year - start_date.year) * 12 + (now.month - start_date.month))
                 amount = round(float(p.monthly_fee) * months, 4)
             items.append({
@@ -208,13 +208,19 @@ async def get_billing_summary(
                 "currency_symbol": p.currency_symbol,
             })
         else:
-            # API mode: balance_consumed
-            first = await db.execute(
-                select(func.coalesce(func.min(CollectionLog.balance), 0.0))
+            # API mode: incremental diff accumulation (skip top-ups)
+            snapshots_result = await db.execute(
+                select(CollectionLog.balance)
                 .where(CollectionLog.provider_id == p.id, CollectionLog.balance.isnot(None))
+                .order_by(CollectionLog.created_at.asc())
             )
-            initial = first.scalar() or 0.0
-            consumed = round(float(initial - (p.last_balance or 0.0)), 4)
+            balances = [row[0] for row in snapshots_result.all()]
+            consumed = 0.0
+            for i in range(1, len(balances)):
+                diff = balances[i - 1] - balances[i]
+                if diff > 0:
+                    consumed += diff
+            consumed = round(float(consumed), 4)
             items.append({
                 "provider_id": p.id, "provider_name": p.name,
                 "billing_mode": p.billing_mode, "amount": consumed,

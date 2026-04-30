@@ -23,6 +23,7 @@ export interface Provider {
   billing_mode: string
   monthly_fee: number | null
   sub_start_date: string | null
+  category_id: number | null
   created_at: string
 }
 
@@ -102,3 +103,42 @@ export interface BillingItem {
 
 export const fetchBillingSummary = (params?: { provider_id?: number }) =>
   api.get<BillingItem[]>('/stats/billing-summary', { params })
+
+// ── Category APIs ──────────────────────
+
+export interface Category {
+  id: number
+  name: string
+  api_base_url: string
+  api_usage_path: string
+  api_balance_path: string | null
+  tp_base_url: string
+  tp_usage_path: string
+  currency_symbol: string
+  models: string[]
+  logo_path: string | null
+}
+
+export const fetchCategories = () =>
+  api.get<Category[]>('/categories')
+
+export const fetchCategoryPresets = () =>
+  api.get<string[]>('/categories/presets')
+
+export const createCategory = (data: Omit<Category, 'id'>) =>
+  api.post<{ id: number; name: string }>('/categories', data)
+
+export const updateCategory = (id: number, data: Partial<Omit<Category, 'id'>>) =>
+  api.put<{ id: number; name: string }>(`/categories/${id}`, data)
+
+export const deleteCategory = (id: number) =>
+  api.delete(`/categories/${id}`)
+
+export const uploadCategoryLogo = (id: number, file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post<{ logo_path: string }>(`/categories/${id}/logo`, form)
+}
+
+export const deleteCategoryLogo = (id: number) =>
+  api.delete(`/categories/${id}/logo`)
